@@ -20,6 +20,18 @@ export async function getAllStations() {
   return await Station.find({}).sort({ line: 1, order: 1 }).lean();
 }
 
+export async function getStationById(stationId) {
+  if (!isMongoAvailable()) {
+    return memoryStations.find((station) => station.id === stationId) || null;
+  }
+
+  return await Station.findOne({ id: stationId }).lean();
+}
+
+export async function stationExists(stationId) {
+  return Boolean(await getStationById(stationId));
+}
+
 // Add multiple stations at once (for initial setup)
 export async function seedStations(stationsArray) {
   if (!isMongoAvailable()) {
