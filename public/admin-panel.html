@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+      // Preload stations and train position before page fully loads
+      window.preloadedData = {
+        stations: [],
+        trainPosition: null,
+      };
+
+      // Fetch stations
+      fetch("/api/v1/stations", {
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("adminToken"),
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          window.preloadedData.stations = data;
+        })
+        .catch((err) => console.error("Failed to preload stations:", err));
+    </script>
+  </head>
+  <body>
+    <div class="layout">
+      <header>
+        <img src="/images/metro.gif" alt="MetroSync Logo" class="icon" />
+        <h1 id="admin-station-title">Select Station</h1>
+        <a href="/" class="btn" onclick="localStorage.removeItem('adminToken')"
+          >Logout</a
+        >
+      </header>
+
+      <div class="dashboard-grid">
+        <div class="dashboard-left">
+          <div class="station-selector">
+            <label for="admin-station-select">Select Station</label>
+            <select id="admin-station-select"></select>
+          </div>
+
+          <div class="metro-section">
+            <h2 id="map-title">Select Station</h2>
+            <div class="map-line-container">
+              <div id="admin-map-line" class="map-line">
+                <!-- dynamic train + stations -->
+              </div>
+            </div>
+            <p id="admin-viewers-text" class="viewers-text">Live viewers: 0</p>
+          </div>
+        </div>
+
+        <div class="dashboard-right">
+          <div class="announcements-panel">
+            <h2>Announcements</h2>
+            <ul id="admin-announcement-list" class="announcement-list"></ul>
+
+            <form id="announcement-form" class="announcement-form">
+              <textarea
+                id="announcement-text"
+                placeholder="Type an announcement..."
+              ></textarea>
+              <button type="submit" class="btn">Send Announcement</button>
+            </form>
+            <p id="announcement-error" class="error-text"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/shared-utils.js"></script>
+    <script type="module" src="/admin-panel.js"></script>
+  </body>
+</html>
