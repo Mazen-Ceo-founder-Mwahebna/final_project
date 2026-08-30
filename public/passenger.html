@@ -2,16 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Passenger</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Live MetroSync passenger station announcements and train position."
+    />
+    <title>MetroSync Live | Passenger</title>
     <link rel="stylesheet" href="/styles.css" />
     <script>
-      // Preload stations and train position before page fully loads
       window.preloadedData = {
         stations: [],
         trainPosition: null,
       };
 
-      // Fetch stations
       fetch("/api/v1/stations")
         .then((res) => res.json())
         .then((data) => {
@@ -20,39 +23,84 @@
         .catch((err) => console.error("Failed to preload stations:", err));
     </script>
   </head>
-  <body>
+  <body class="app-page passenger-page">
     <div class="layout">
-      <header>
-        <img src="/images/metro.gif" alt="MetroSync Logo" class="icon" />
-        <h1 id="station-title">Select Station</h1>
-        <a href="/" class="btn">Sign In As Admin</a>
+      <header class="app-header">
+        <a href="/passenger.html" class="brand-lockup compact">
+          <img src="/images/metro.gif" alt="" class="brand-mark" />
+          <span>MetroSync Live</span>
+        </a>
+
+        <div class="header-title">
+          <p class="eyebrow">Passenger Display</p>
+          <h1 id="station-title">Select Station</h1>
+        </div>
+
+        <a href="/" class="btn btn-primary">Admin Sign In</a>
       </header>
 
-      <div class="dashboard-grid">
-        <div class="dashboard-left">
-          <div class="station-selector">
-            <label for="station-select">Select Station</label>
+      <main class="dashboard-grid">
+        <section class="dashboard-left" aria-label="Station map">
+          <div class="station-selector panel">
+            <div>
+              <label for="station-select">Station</label>
+              <p>Choose the platform view to follow live updates.</p>
+            </div>
             <select id="station-select"></select>
           </div>
 
-          <div class="metro-section">
-            <h2 id="map-title">Select Station</h2>
-            <div class="map-line-container">
-              <div id="map-line" class="map-line">
-                <!-- dynamic train + stations -->
-              </div>
+          <div class="metric-grid" aria-label="Station summary">
+            <div class="metric-card">
+              <span>Selected</span>
+              <strong id="selected-station-stat">None</strong>
             </div>
+            <div class="metric-card">
+              <span>Stations</span>
+              <strong id="station-count-stat">0</strong>
+            </div>
+            <div class="metric-card accent">
+              <span>Live viewers</span>
+              <strong id="viewers-count-stat">0</strong>
+            </div>
+          </div>
+
+          <div class="metro-section panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Line Map</p>
+                <h2 id="map-title">Select Station</h2>
+              </div>
+              <span class="line-chip">Line 1</span>
+            </div>
+
+            <div class="map-line-container">
+              <div
+                id="map-line"
+                class="map-line"
+                aria-label="Metro line stations"
+              ></div>
+            </div>
+
             <p id="viewers-text" class="viewers-text">Live viewers: 0</p>
           </div>
-        </div>
+        </section>
 
-        <div class="dashboard-right">
-          <div class="announcements-panel">
-            <h2>Announcements</h2>
-            <ul id="announcement-list" class="announcement-list"></ul>
+        <aside class="dashboard-right" aria-label="Announcements">
+          <div class="announcements-panel panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Live Feed</p>
+                <h2>Announcements</h2>
+              </div>
+            </div>
+            <ul
+              id="announcement-list"
+              class="announcement-list"
+              aria-live="polite"
+            ></ul>
           </div>
-        </div>
-      </div>
+        </aside>
+      </main>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

@@ -1,4 +1,3 @@
-// Import all shared utilities
 import {
   appState,
   handleStationChange,
@@ -6,51 +5,59 @@ import {
   loadStationsWithPreload,
   populateStationDropdown,
   renderMap,
+  resetViewerCount,
+  setStationLoadError,
+  setupMapDotSelection,
   setupSocketListeners,
+  showAnnouncementPlaceholder,
   startClientSideTrainAnimation,
 } from "./shared-utils.js";
 
-// Connect to Socket.IO server for real-time updates
 const socket = io();
 
-// Get HTML elements
 const stationSelect = document.getElementById("station-select");
 const stationTitle = document.getElementById("station-title");
 const mapTitle = document.getElementById("map-title");
 const mapLine = document.getElementById("map-line");
 const announcementList = document.getElementById("announcement-list");
 const viewersText = document.getElementById("viewers-text");
+const selectedStationStat = document.getElementById("selected-station-stat");
+const stationCountStat = document.getElementById("station-count-stat");
+const viewersCountStat = document.getElementById("viewers-count-stat");
 
-// Load and initialize everything
-async function init() {
-  // Load stations from server (or use preloaded data)
-  appState.stations = await loadStationsWithPreload();
-
-  // Populate dropdown with stations
-  populateStationDropdown(stationSelect);
-
-  // Draw station dots on map
-  renderMap(mapLine);
-
-  // Create train and start animation
-  initializeTrain(mapLine);
-  startClientSideTrainAnimation();
-
-  // Setup socket listeners for announcements and viewer counts
-  setupSocketListeners(socket, announcementList, viewersText);
+function updateSelectedStation(station) {
+  selectedStationStat.textContent = station ? station.name : "None";
 }
 
-// When user selects a station from dropdown
+async function init() {
+  try {
+    appState.stations = await loadStationsWithPreload();
+    stationCountStat.textContent = String(appState.stations.length);
+
+    populateStationDropdown(stationSelect);
+    renderMap(mapLine);
+    initializeTrain(mapLine);
+    startClientSideTrainAnimation();
+    showAnnouncementPlaceholder(announcementList);
+    setupMapDotSelection(mapLine, stationSelect);
+    setupSocketListeners(socket, announcementList, viewersText, viewersCountStat);
+  } catch (err) {
+    setStationLoadError(stationSelect, announcementList);
+  }
+}
+
 stationSelect.addEventListener("change", async (e) => {
+  resetViewerCount(viewersText, viewersCountStat);
+
   const handler = handleStationChange(
     socket,
     e.target.value,
-    [stationTitle, mapTitle], // Elements to update with station name
+    [stationTitle, mapTitle],
     announcementList,
     mapLine
   );
-  await handler();
+  const station = await handler();
+  updateSelectedStation(station);
 });
 
-// Start the app
 init();

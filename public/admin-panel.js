@@ -1,4 +1,3 @@
-// Import all shared utilities
 import {
   appState,
   handleStationChange,
@@ -6,31 +5,31 @@ import {
   loadStationsWithPreload,
   populateStationDropdown,
   renderMap,
+  resetViewerCount,
+  setStationLoadError,
+  setupMapDotSelection,
   setupSocketListeners,
+  showAnnouncementPlaceholder,
   startClientSideTrainAnimation,
 } from "./shared-utils.js";
 
-// Check if admin is logged in
 function checkAuth() {
   const token = localStorage.getItem("adminToken");
   if (!token) {
-    // No token found, redirect to login page
     window.location.href = "/";
     return null;
   }
+
   return token;
 }
 
-// Get token or redirect to login
 const token = checkAuth();
 if (!token) {
   throw new Error("Not authenticated");
 }
 
-// Connect to Socket.IO for real-time updates
 const socket = io();
 
-// Get HTML elements
 const stationSelect = document.getElementById("admin-station-select");
 const adminStationTitle = document.getElementById("admin-station-title");
 const adminMapTitle = document.getElementById("map-title");
@@ -40,59 +39,77 @@ const viewersText = document.getElementById("admin-viewers-text");
 const announcementForm = document.getElementById("announcement-form");
 const announcementText = document.getElementById("announcement-text");
 const announcementError = document.getElementById("announcement-error");
+const announcementCount = document.getElementById("announcement-count");
+const logoutLink = document.getElementById("logout-link");
+const selectedStationStat = document.getElementById("admin-selected-station-stat");
+const stationCountStat = document.getElementById("admin-station-count-stat");
+const viewersCountStat = document.getElementById("admin-viewers-count-stat");
+const submitButton = announcementForm.querySelector("button");
 
-// Load and initialize everything
-async function init() {
-  // Load stations from server (or use preloaded data) with auth token
-  appState.stations = await loadStationsWithPreload(token);
-
-  // Populate dropdown with stations
-  populateStationDropdown(stationSelect);
-
-  // Draw station dots on map
-  renderMap(mapLine);
-
-  // Create train and start animation
-  initializeTrain(mapLine);
-  startClientSideTrainAnimation();
-
-  // Setup socket listeners for announcements and viewer counts
-  setupSocketListeners(socket, announcementList, viewersText);
+function updateSelectedStation(station) {
+  selectedStationStat.textContent = station ? station.name : "None";
 }
 
-// When admin selects a station
+function updateCharacterCount() {
+  announcementCount.textContent = `${announcementText.value.length} / ${announcementText.maxLength}`;
+}
+
+async function init() {
+  try {
+    appState.stations = await loadStationsWithPreload(token);
+    stationCountStat.textContent = String(appState.stations.length);
+
+    populateStationDropdown(stationSelect);
+    renderMap(mapLine);
+    initializeTrain(mapLine);
+    startClientSideTrainAnimation();
+    showAnnouncementPlaceholder(announcementList);
+    setupMapDotSelection(mapLine, stationSelect);
+    setupSocketListeners(socket, announcementList, viewersText, viewersCountStat);
+  } catch (err) {
+    setStationLoadError(stationSelect, announcementList);
+  }
+}
+
 stationSelect.addEventListener("change", async (e) => {
+  resetViewerCount(viewersText, viewersCountStat);
+
   const handler = handleStationChange(
     socket,
     e.target.value,
-    [adminStationTitle, adminMapTitle], // Elements to update with station name
+    [adminStationTitle, adminMapTitle],
     announcementList,
     mapLine,
-    token // Pass token for authenticated requests
+    token
   );
-  await handler();
+  const station = await handler();
+  updateSelectedStation(station);
 });
 
-// When admin submits new announcement
+announcementText.addEventListener("input", () => {
+  announcementError.textContent = "";
+  updateCharacterCount();
+});
+
 announcementForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   announcementError.textContent = "";
 
-  // Check if station is selected
   if (!appState.currentStationId) {
     announcementError.textContent = "Choose a station first.";
     return;
   }
 
-  // Check if text is provided
   const text = announcementText.value.trim();
   if (!text) {
     announcementError.textContent = "Announcement text is required.";
     return;
   }
 
+  submitButton.disabled = true;
+  submitButton.textContent = "Sending...";
+
   try {
-    // Send announcement to server
     const res = await fetch(
       `/api/v1/stations/${appState.currentStationId}/announcements`,
       {
@@ -105,7 +122,6 @@ announcementForm.addEventListener("submit", async (e) => {
       }
     );
 
-    // Check if request failed
     if (!res.ok) {
       const body = await res.json();
       announcementError.textContent =
@@ -113,12 +129,19 @@ announcementForm.addEventListener("submit", async (e) => {
       return;
     }
 
-    // Success! Clear the text box
     announcementText.value = "";
+    updateCharacterCount();
   } catch (err) {
-    announcementError.textContent = "Network error";
+    announcementError.textContent = "Network error. Please try again.";
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "Send Announcement";
   }
 });
 
-// Start the app
+logoutLink.addEventListener("click", () => {
+  localStorage.removeItem("adminToken");
+});
+
+updateCharacterCount();
 init();
